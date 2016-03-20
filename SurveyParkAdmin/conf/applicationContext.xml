@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd">
+	
+	<context:component-scan base-package="com.atguigu.survey.*.component.*"/>
+	
+	<!--  1.引入外部属性文件 -->
+	<context:property-placeholder location="classpath:jdbc.properties"/>
+	
+	<!-- 2.配置数据源的bean -->
+	<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+		<property name="user" value="${jdbc.user}"/>
+		<property name="password" value="${jdbc.password}"/>
+		<property name="driverClass" value="${jdbc.driver}"/>
+		<property name="jdbcUrl" value="${jdbc.url}"/>
+	</bean>
+	
+	<!-- 3.配置SessionFactory -->
+	<bean id="sessionFactory" class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+		<!-- 装配数据源 -->
+		<property name="dataSource" ref="dataSource"/>
+		<!-- 指定Hibernate配置文件的位置 -->
+		<property name="configLocation" value="classpath:hibernate.cfg.xml"/>
+		<!-- 指定hbm映射文件的位置 -->
+		<property name="mappingLocations" value="classpath:com/atguigu/survey/*/entity/*.hbm.xml"/>
+	</bean>
+	
+	<!-- 4.配置Hibernate事务管理器 -->
+	<bean id="hibernateTransactionManager" class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+		<!-- 装配SessionFactory -->
+		<property name="sessionFactory" ref="sessionFactory"/>
+	</bean>
+	
+	<!-- 5.开启基于注解的声明式事务 -->
+	<tx:annotation-driven transaction-manager="hibernateTransactionManager"/>
+	
+	<!-- 6.以基于XML的方式配置日志切面的bean -->
+	<bean id="logAspect" class="com.atguigu.survey.admin.advisor.LogAspect" autowire="byType"/>
+	
+	<!-- 7.以基于XML的方式配置日志切面 -->
+	<aop:config>
+		<!-- 配置日志切面 -->
+		<aop:aspect ref="logAspect">
+			
+			<!-- 声明切入点表达式 -->
+			<aop:pointcut expression="(execution(* *..*Service.save*(..)) || 
+									  execution(* *..*Service.update*(..)) || 
+									  execution(* *..*Service.delete*(..)) || 
+									  execution(* *..*Service.remove*(..)) || 
+									  execution(* *..*Service.copy*(..)) || 
+									  execution(* *..*Service.move*(..)) || 
+									  execution(* *..*Service.calculate*(..))) and !bean(logServiceImpl)" id="logPointCut"/>
+			
+			<!-- 指定环绕通知的通知方法 -->
+			<aop:around pointcut-ref="logPointCut" method="record"/>
+			
+		</aop:aspect>
+	</aop:config>
+	
+	<!-- 配置石英任务bean细节 -->
+	<bean id="jobDetailBean" class="org.springframework.scheduling.quartz.JobDetailBean">
+		<property name="jobClass" value="com.atguigu.survey.admin.scheduler.LogScheduler"/>
+		<property name="jobDataMap">
+			<map>
+				<entry key="logService" value-ref="logServiceImpl"/>
+			</map>
+		</property>
+	</bean>
+	
+	<!-- 配置触发器 -->
+	<bean id="cronTriggerBean" class="org.springframework.scheduling.quartz.CronTriggerBean">
+		<property name="jobDetail" ref="jobDetailBean"/>
+		<!-- 适合的配置：0 0 0 15 * ? -->
+		<!-- 便于测试的配置：0 8 11 1 * ? -->
+		<property name="cronExpression" value="0 8 11 1 * ?"/>
+	</bean>
+	
+	<!-- 配置启动石英任务的工厂bean -->
+	<bean id="factoryBean" class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+		<property name="triggers">
+			<list>
+				<ref bean="cronTriggerBean"/>
+			</list>
+		</property>
+	</bean>
+	
+	<!-- 配置Spring监听器 -->
+	<bean id="logInitListener" class="com.atguigu.survey.admin.listener.LogInitListener" autowire="byType"/>
+
+</beans>

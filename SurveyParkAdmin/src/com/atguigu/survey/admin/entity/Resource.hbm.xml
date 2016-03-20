@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 2016-2-27 8:35:34 by Hibernate Tools 3.4.0.CR1 -->
+<hibernate-mapping>
+    <class name="com.atguigu.survey.admin.entity.Resource" table="RESOURCES">
+        <id name="resourceId" type="java.lang.Integer">
+            <column name="RESOURCE_ID" />
+            <generator class="native" />
+        </id>
+        <property name="actionName" type="java.lang.String">
+            <column name="ACTION_NAME" />
+        </property>
+        <property name="resourceName" type="java.lang.String">
+            <column name="RESOURCE_NAME" />
+        </property>
+        <property name="resPos" type="int">
+            <column name="RES_POS" />
+        </property>
+        <property name="resCode" type="long">
+            <column name="RES_CODE" />
+        </property>
+    </class>
+</hibernate-mapping>
