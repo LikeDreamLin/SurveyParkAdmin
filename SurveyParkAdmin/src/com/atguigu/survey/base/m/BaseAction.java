@@ -60,7 +60,7 @@ public class BaseAction<T>
 
 	//返回t的实例对象：通过反射创建T类型的空对象
 	public T getModel() {
-		
+		System.out.println("ssss");
 		return t;
 	}
 
